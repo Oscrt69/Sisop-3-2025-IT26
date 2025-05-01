@@ -165,3 +165,60 @@ Fungsi utama dimana `pthread` merupakan array untuk menyimpan thread 3 agen tadi
 ## Soal no 3
 
 ## Soal no 4
+
+`#include "shm_common.h"` digunakan di system.c dan hunter.c agar keduanya memiliki akses terhadap clue (struktur data dan key yang sama dalam shared memory).
+
+```
+// hunter.c
+int shmid = shmget(key, sizeof(SystemData), 0666);
+    
+    if (shmid == -1) {
+        printf("System is not running!\n");
+        return 1;
+    }
+```
+Fungsi ini mencegah user menjalankan hunter sebelum system dijalankan. 
+<br>
+<img src = "https://github.com/user-attachments/assets/4eba56ab-48e7-460a-923b-f94fa35c3231" width = "400"> <br>
+```
+// system.c > generate_dungeon(SystemData* data)
+const char* dungeon_names[] = {
+        "Double Dungeon",
+        "Demon Castle",
+        "Pyramid Dungeon",
+        "Red Gate Dungeon",
+        "Hunters Guild Dungeon",
+        "Busan A-Rank Dungeon",
+        "Insects Dungeon",
+        "Goblins Dungeon",
+        "D-Rank Dungeon",
+        "Gwanak Mountain Dungeon",
+        "Hapjeong Subway Station Dungeon"
+    };
+
+d->min_level = rand() % 5 + 1;   // Level antara 1-5
+    d->exp = rand() % 151 + 150;    // ATK antara 150-300
+    d->atk = rand() % 51 + 100;     // HP antara 100-150
+    d->hp = rand() % 51 + 50;       // DEF antara 50-100
+    d->def = rand() % 26 + 25;      // EXP antara 25-50
+    d->shm_key = ftok("/tmp", 200 + data->num_dungeons);
+```
+Fungsi `generate_dungeon` pada system.c berfungsi untuk membuat dungeon baru secara acak dengan nama yang sudah tertera dan memberikan stats dan minimum secara acak dengan constrain tertentu, lalu
+menambahkannya ke dalam shared memory yang dikelola oleh SystemData.
+```
+void list_available_dungeons(SystemData* data, Hunter* h) {
+    printf("\n== AVAILABLE DUNGEONS ==\n");
+    int count = 0;
+    for (int i = 0; i < data->num_dungeons; ++i) {
+        if (data->dungeons[i].min_level <= h->level) {
+            printf("%d. %s (Level %d+)\n", ++count, data->dungeons[i].name, data->dungeons[i].min_level);
+        }
+    }
+    if (count == 0) {
+        printf("No dungeons available for your level!\n");
+       
+    }
+}
+```
+
+Fungsi ini menyetak dungeon yang telah di-generate di system, namun tidak semua dungeon yang telah digenerate oleh system.c dapat dilihat semua user, dungeon yang dapat dilihat bergantung dengan level user dan minimum level dungeonnya, semakin tinggi level user, semakin banyak pula dungeon yang bisa dilihat dan bisa digunakan.
