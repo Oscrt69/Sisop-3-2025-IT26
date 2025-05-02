@@ -180,6 +180,23 @@ int shmid = shmget(key, sizeof(SystemData), 0666);
 Fungsi ini mencegah user menjalankan hunter sebelum system dijalankan. 
 <br>
 <img src = "https://github.com/user-attachments/assets/4eba56ab-48e7-460a-923b-f94fa35c3231" width = "400"> <br>
+Program tidak berjalan karena system.c belum dijalankan. 
+
+<img src = "https://github.com/user-attachments/assets/c7706d20-e46e-4f96-a920-5cfd0de1d3b7" width = "600"> <br>
+Menu sederhana hunter.c (kiri) dan system.c (kanan) ketika awal dijalankan
+
+```
+void list_hunters(SystemData* data) {
+    printf("\n== HUNTER INFO ==\n");
+    for (int i = 0; i < data->num_hunters; ++i) {
+        Hunter* h = &data->hunters[i];
+        printf("Name: %-10s Level: %-2d EXP: %-3d ATK: %-3d HP: %-3d DEF: %-3d %s\n",
+               h->username, h->level, h->exp, h->atk, h->hp, h->def,
+               h->banned ? "[BANNED]" : "");
+    }
+}
+```
+Menampilkan semua hunter yang terdaftar dalam sistem. 
 ```
 // system.c > generate_dungeon(SystemData* data)
 const char* dungeon_names[] = {
@@ -222,3 +239,7 @@ void list_available_dungeons(SystemData* data, Hunter* h) {
 ```
 
 Fungsi ini menyetak dungeon yang telah di-generate di system, namun tidak semua dungeon yang telah digenerate oleh system.c dapat dilihat semua user, dungeon yang dapat dilihat bergantung dengan level user dan minimum level dungeonnya, semakin tinggi level user, semakin banyak pula dungeon yang bisa dilihat dan bisa digunakan.
+
+<img src = "https://github.com/user-attachments/assets/9c3df058-5937-4b21-a5f4-d79f26d3f28f" width = "600"> <br>
+Gambar di atas meunjukkan bahwa terdapat 6 dungeon yang telah di-generate, namun kedua user (`oscar1` dan `oscar2`) hanya bisa melihat 1 dungeon saja sesuai dengan level mereka saat ini.
+
