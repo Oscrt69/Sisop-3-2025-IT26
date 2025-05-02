@@ -294,5 +294,25 @@ Hunter dipastikan menang melawan Dungeon dan mendapatkan stats secara random den
 
 ![raid succes](https://github.com/user-attachments/assets/cd3bead1-055c-4c0e-a0ad-6b63e7f5e45d)
 
+```
+// void battle_hunter(SystemData* data, Hunter* attacker)
+ printf("\n--- PVP LIST ---\n");
+    for (int i = 0; i < data->num_hunters; ++i) {
+        if (i != current_hunter_idx && !data->hunters[i].banned) {
+            int power = data->hunters[i].atk + data->hunters[i].hp + data->hunters[i].def;
+            printf("%s - Total Power: %d\n", data->hunters[i].username, power);
+        }
+    }
+```
+Potongan kode ini adalah salah satu dari bagian opsi ke-3 yaitu Hunter's Battle
+![pvp list](https://github.com/user-attachments/assets/3d0726bd-5e08-45eb-b9f2-bfee3f0e3507) <br>
+Hunter bisa memilih hunter lain untuk dikalahkan. Tips supaya menang adalah dengan memilih lawan dengan total power yang lebih rendah dari hunter yang dipakai saat ini, jika melawan hunter dengan total power yang lebih besar, maka hunter dengan power yang lebih kecil akan kalah dan keluar dari `hunter.c`.
+
+ ### Gambaran jika hunter menang: 
+
+![menang](https://github.com/user-attachments/assets/c3755344-0a57-4c30-b8de-3601a42e1c1b) <br>
 
 
+### Gambaran jika hunter kalah:
+
+![kalah](https://github.com/user-attachments/assets/03ee33f9-aa88-4d4f-92d5-5877ce51bc30) <br>
