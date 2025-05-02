@@ -306,13 +306,23 @@ Hunter dipastikan menang melawan Dungeon dan mendapatkan stats secara random den
 ```
 Potongan kode ini adalah salah satu dari bagian opsi ke-3 yaitu Hunter's Battle
 ![pvp list](https://github.com/user-attachments/assets/3d0726bd-5e08-45eb-b9f2-bfee3f0e3507) <br>
-Hunter bisa memilih hunter lain untuk dikalahkan. Tips supaya menang adalah dengan memilih lawan dengan total power yang lebih rendah dari hunter yang dipakai saat ini, jika melawan hunter dengan total power yang lebih besar, maka hunter dengan power yang lebih kecil akan kalah dan keluar dari `hunter.c`.
+
+Hunter bisa memilih hunter lain untuk dikalahkan. Tips supaya menang adalah dengan memilih lawan dengan total power yang lebih rendah dari hunter yang dipakai saat ini, jika melawan hunter dengan total power yang lebih besar, maka hunter dengan power yang lebih kecil akan kalah dan keluar dari `hunter.c`. Hunter yang kalah akan dihapus dari sistem dan semua statsnya akan diberikan kepada hunter yang dilawannya.
 
  ### Gambaran jika hunter menang: 
 
 ![menang](https://github.com/user-attachments/assets/c3755344-0a57-4c30-b8de-3601a42e1c1b) <br>
 
+Stats hunter yang menang akan ditambahkan
 
 ### Gambaran jika hunter kalah:
 
 ![kalah](https://github.com/user-attachments/assets/03ee33f9-aa88-4d4f-92d5-5877ce51bc30) <br>
+
+Di game ini, system bisa banned atau unbanned hunter kapan saja <br>
+<img src = "https://github.com/user-attachments/assets/222b335e-ef8a-4a5f-bbf3-5d2079e8374b" width = "500"> <br>
+![baned2](https://github.com/user-attachments/assets/7ae1e33d-79cd-4157-8a1e-51846936a358) <br>
+<img src = "https://github.com/user-attachments/assets/4b527381-77b5-4994-b916-b44417bd8434" width =  "500"> <br>
+
+<img src = "https://github.com/user-attachments/assets/d86975b9-ffe5-477d-acc8-975cc553f47a" width = "400">
+
