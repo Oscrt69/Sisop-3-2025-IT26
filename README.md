@@ -168,6 +168,7 @@ Fungsi utama dimana `pthread` merupakan array untuk menyimpan thread 3 agen tadi
 
 `#include "shm_common.h"` digunakan di system.c dan hunter.c agar keduanya memiliki akses terhadap clue (struktur data dan key yang sama dalam shared memory).
 
+
 ```
 // hunter.c
 int shmid = shmget(key, sizeof(SystemData), 0666);
@@ -177,13 +178,19 @@ int shmid = shmget(key, sizeof(SystemData), 0666);
         return 1;
     }
 ```
-Fungsi ini mencegah user menjalankan hunter sebelum system dijalankan. 
+Fungsi di atas ini mencegah user (hunter) menjalankan `hunter.c` sebelum `system.c` dijalankan. 
+
 <br>
 <img src = "https://github.com/user-attachments/assets/4eba56ab-48e7-460a-923b-f94fa35c3231" width = "400"> <br>
 Program tidak berjalan karena system.c belum dijalankan. 
+<br>
 
 <img src = "https://github.com/user-attachments/assets/c7706d20-e46e-4f96-a920-5cfd0de1d3b7" width = "600"> <br>
 Menu sederhana hunter.c (kiri) dan system.c (kanan) ketika awal dijalankan
+<br>
+
+![list dungeon](https://github.com/user-attachments/assets/e2d1b436-105e-4780-9132-9951b23a9f6b) <br>
+Ini adalah stats default hunter di awal permainan.
 
 ```
 void list_hunters(SystemData* data) {
@@ -197,6 +204,7 @@ void list_hunters(SystemData* data) {
 }
 ```
 Menampilkan semua hunter yang terdaftar dalam sistem. 
+<br>
 ```
 // system.c > generate_dungeon(SystemData* data)
 const char* dungeon_names[] = {
@@ -222,6 +230,7 @@ d->min_level = rand() % 5 + 1;   // Level antara 1-5
 ```
 Fungsi `generate_dungeon` pada system.c berfungsi untuk membuat dungeon baru secara acak dengan nama yang sudah tertera dan memberikan stats dan minimum secara acak dengan constrain tertentu, lalu
 menambahkannya ke dalam shared memory yang dikelola oleh SystemData.
+<br>
 ```
 void list_available_dungeons(SystemData* data, Hunter* h) {
     printf("\n== AVAILABLE DUNGEONS ==\n");
@@ -238,8 +247,52 @@ void list_available_dungeons(SystemData* data, Hunter* h) {
 }
 ```
 
-Fungsi ini menyetak dungeon yang telah di-generate di system, namun tidak semua dungeon yang telah digenerate oleh system.c dapat dilihat semua user, dungeon yang dapat dilihat bergantung dengan level user dan minimum level dungeonnya, semakin tinggi level user, semakin banyak pula dungeon yang bisa dilihat dan bisa digunakan.
+Fungsi ini menyetak dungeon yang telah di-generate di system, namun tidak semua dungeon yang telah digenerate oleh system.c dapat dilihat semua user, dungeon yang dapat dilihat bergantung dengan level user dan minimum level dungeonnya, semakin tinggi level user, semakin banyak pula dungeon yang bisa dilihat dan bisa digunakan. <br>
 
 <img src = "https://github.com/user-attachments/assets/9c3df058-5937-4b21-a5f4-d79f26d3f28f" width = "600"> <br>
-Gambar di atas meunjukkan bahwa terdapat 6 dungeon yang telah di-generate, namun kedua user (`oscar1` dan `oscar2`) hanya bisa melihat 1 dungeon saja sesuai dengan level mereka saat ini.
+Gambar di atas meunjukkan bahwa terdapat 6 dungeon yang telah di-generate, namun kedua hunter (`oscar1` dan `oscar2`) hanya bisa melihat 1 dungeon saja sesuai dengan level mereka saat ini.
+
+```
+// hunter.c > raid_dungeon
+list_available_dungeons(data, h);
+    
+    int choice;
+    printf("Choose Dungeon: ");
+    scanf("%d", &choice);
+    
+    int available_count = 0;
+    int dungeon_idx = -1;
+    for (int i = 0; i < data->num_dungeons; ++i) {
+        if (data->dungeons[i].min_level <= h->level) {
+            available_count++;
+            if (available_count == choice) {
+                dungeon_idx = i;
+                break;
+            }
+        }
+    }
+```
+Ini adalah fungsi yang akan terpanggil apabila hunter memilih opsi kedua (Dungeon Raid).
+<br>
+```
+// hunter.c > raid_dungeon
+ Dungeon* d = &data->dungeons[dungeon_idx];
+    h->exp += d->exp;
+    h->atk += d->atk;
+    h->hp += d->hp;
+    h->def += d->def;
+    
+    printf("\nRaid success! Gained:\n");
+    printf("ATK: %d\nHP: %d\nDEF: %d\nEXP: %d\n", d->atk, d->hp, d->def, d->exp);
+```
+Hunter dipastikan menang melawan Dungeon dan mendapatkan stats secara random dengan constraint berikut:<br>
+
+- ATK antara 150-300 <br>
+- HP antara 100-150 <br>
+- DEF antara 50-100 <br>
+- EXP antara 25-50 <br>
+
+![raid succes](https://github.com/user-attachments/assets/cd3bead1-055c-4c0e-a0ad-6b63e7f5e45d)
+
+
 
