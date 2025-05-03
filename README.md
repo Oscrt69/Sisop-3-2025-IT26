@@ -162,6 +162,20 @@ int main() {
 ```
 Fungsi utama dimana `pthread` merupakan array untuk menyimpan thread 3 agen tadi. `for (int i = 0; i < 3; i++)` akan membuat 3 thread masing masing untuk 1 agen yang bertugas sesuai instruksi soal. Kemudia tunggu semua thread karena loop infinite terjadi di `agent_function`. Shared memory digunakan agar sinkronasi data ke-2 proses terjadi secara real time.
 
+### Output ./dispatcher -list
+![image](https://github.com/user-attachments/assets/3a483731-7e4d-41fb-82fe-4c848c0643f6)
+### Ouput ./dispatcher -deliver
+![image](https://github.com/user-attachments/assets/da2b4b86-9d2d-48f5-87ab-f5e2db1fbe24)
+### Output ./dispatcher -status
+![image](https://github.com/user-attachments/assets/8b36f006-7ce0-481f-8826-59af9fab7ca7)
+### cat delivery.log
+![image](https://github.com/user-attachments/assets/fe1fc50c-4024-418e-8595-1e97ce4f2b71)
+Dapat dilihat jika log menampilan sesuai dengan pengiriman oleh delivery agent dan khusus untuk `./dispatcher -deliver` mengirimkan opsi reguler dengan nama user yang tertera.
+
+
+
+
+
 
 
 ## Soal no 3
