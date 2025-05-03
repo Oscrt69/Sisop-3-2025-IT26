@@ -4,11 +4,11 @@
 
 // Daftar senjata yang tersedia di shop
 Weapon weapons[5] = {
-    {"Terra Blade", 50, 10, ""},
-    {"Flint & Steel", 150, 25, ""},
-    {"Kitchen Knife", 200, 35, ""},
-    {"Staff of Light", 120, 20, "10% Insta-Kill Chance"},
-    {"Dragon Claws", 300, 50, "50% Crit Chance"}
+    {"Tropa Tripa", 50, 10, ""},
+    {"Spioniro Golubiro", 150, 25, ""},
+    {"Brr Brr Patapim", 200, 35, ""},
+    {"Tung Tung Tung Sahur", 120, 20, "10% Insta-Kill Chance"},
+    {"Bombardiro Crocodilo", 300, 50, "50% Crit Chance"}
 };
 
 Weapon get_weapon(int index) {
