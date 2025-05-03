@@ -101,8 +101,6 @@ void* handle_client(void* arg) {
         else if (strcmp(command, "INVENTORY") == 0) {
             char inventory[512] = {0};
             strcat(inventory, "INVENTORY|");
-            
-            // Always include fists
             strcat(inventory, "0:Fists|");
             
             for (int i = 0; i < 5; i++) {
@@ -149,12 +147,9 @@ void* handle_client(void* arg) {
                 strcpy(response, "ERROR|Already in battle");
             } else {
                 p->in_battle = 1;
-                int enemy_hp = 50 + rand() % 151; // 50-200 HP
-                int reward = 50 + rand() % 151;   // 50-200 gold
-                
-                // Store battle data in response
-                snprintf(response, BUFFER_SIZE, "BATTLE_START|ENEMY_HP:%d|REWARD:%d", 
-                        enemy_hp, reward);
+                int enemy_hp = 50 + rand() % 151; 
+                int reward = 50 + rand() % 151; 
+                snprintf(response, BUFFER_SIZE, "BATTLE_START|ENEMY_HP:%d|REWARD:%d",  enemy_hp, reward);
             }
         }
         else if (strcmp(command, "ATTACK") == 0) {
@@ -232,13 +227,10 @@ int main() {
     
     srand(time(NULL));
 
-    // Create socket
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
         perror("socket failed");
         exit(EXIT_FAILURE);
     }
-    
-    // Set socket options
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
         perror("setsockopt");
         exit(EXIT_FAILURE);
@@ -248,13 +240,11 @@ int main() {
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(PORT);
     
-    // Bind socket
     if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
         perror("bind failed");
         exit(EXIT_FAILURE);
     }
     
-    // Listen
     if (listen(server_fd, 3) < 0) {
         perror("listen");
         exit(EXIT_FAILURE);
