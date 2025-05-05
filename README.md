@@ -7,6 +7,60 @@
 | Naufal Ardhana               | 5027241118 |
 
 ## Soal no 1
+### image_client.c
+```
+void print_menu() {
+    printf("\n=== Client Menu ===\n");
+    printf("1. Send input file to server\n");
+    printf("2. Download file from server\n");
+    printf("3. Exit\n>> ");
+}
+```
+Fungsi `print_menu` menampilkan pilihan menu utama ke pengguna di terminal. Menu berisi tiga opsi: mengirim file input ke server, mengunduh file dari server, dan keluar dari program.  
+```
+int connect_to_server() {
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        perror("Socket error");
+        return -1;
+    }
+
+    struct sockaddr_in server_addr = {
+        .sin_family = AF_INET,
+        .sin_port   = htons(SERVER_PORT),
+        .sin_addr.s_addr = inet_addr(SERVER_IP)
+    };
+
+    if (connect(sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+        perror("Connection failed");
+        close(sock);
+        return -1;
+    }
+    return sock;
+}
+```
+Fungsi `connect_to_server` bertugas membuat koneksi TCP ke server. Langkah-langkahnya membuat socket dengan protokol TCP `SOCK_STREAM`, kemudian menyiapkan alamat server dalam sturktur `sockaddr_in`, kemudian fungsi melakukan koneksi ke server menggunakan `connect()`. Jika berhasil, fungsi mengembalikan descriptor socket. Jika gagal, fungsi mencetak pesan error dan mengembalikan -1. 
+```
+void send_input_file() {
+    char filename[256];
+    printf("Enter the file name: ");
+    scanf("%255s", filename);
+
+    char path[512];
+    snprintf(path, sizeof(path), "client/secrets/%s", filename);
+
+    FILE *fp = fopen(path, "r");
+    if (!fp) {
+        perror("Failed to open file");
+        return;
+    }
+
+    char *file_data = malloc(BUFFER_SIZE);
+    size_t read_size = fread(file_data, 1, BUFFER_SIZE - 1, fp);
+    file_data[read_size] = '\0';
+    fclose(fp);
+```
+Pada fungsi `input_file` user diminta untuk memasukkan nama file, kemudian file dicari di direktori lokal. File dibuka dan dibaca menggunakan mode `r`, isi file dibaca ke buffer `file_data`.  
 
 ## Soal no 2
 ### Dispatcher.c
