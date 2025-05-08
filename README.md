@@ -7,6 +7,10 @@
 | Naufal Ardhana               | 5027241118 |
 
 ## Soal no 1
+Mendownload file zip menggunakan `wget`, `wget -O secrets.zip https.......`.
+Unzip file zip tersebut ke dalam direktori client, `unzip secrets.zip -d client`.
+Hapus file zip yang sudah di unzip sebelumnya menggunakan `unlink secrets.zip`.
+
 ### image_client.c
 ```
 void print_menu() {
@@ -59,8 +63,343 @@ void send_input_file() {
     size_t read_size = fread(file_data, 1, BUFFER_SIZE - 1, fp);
     file_data[read_size] = '\0';
     fclose(fp);
+
+    int sock = connect_to_server();
+    if (sock < 0) {
+        free(file_data);
+        return;
+    }
+
+    char *msg = malloc(read_size + 512);
+    int len = snprintf(msg, read_size + 512,
+                       "DECRYPT:%s\n%s\n\n",
+                       filename, file_data);
+
+    send(sock, msg, len, 0);
+    shutdown(sock, SHUT_WR);
+
+    char response[BUFFER_SIZE];
+    int n = recv(sock, response, sizeof(response)-1, 0);
+    if (n > 0) {
+        response[n] = '\0';
+        if (strncmp(response, "OK:", 3) == 0) {
+            printf("Server: Text decrypted and saved as %s", response + 3);
+        } else {
+            printf("Server Error: %s", response + 4);
+        }
+    } else {
+        printf("No response from server.\n");
+    }
+
+    close(sock);
+    free(file_data);
+    free(msg);
+}
 ```
-Pada fungsi `input_file` user diminta untuk memasukkan nama file, kemudian file dicari di direktori lokal. File dibuka dan dibaca menggunakan mode `r`, isi file dibaca ke buffer `file_data`.  
+User diminta memasukkan nama file yang ingin dikirim. Nama file ini akan digunakan untuk membentuk path file. Membangun path lengkap ke file di folder `client/secrets/`, misalnya jika user mengetik input_1.txt, maka path-nya menjadi client/secrets/input_1.txt. File dibuka dalam mode baca `r`. Jika gagal, program mencetak pesan error dan keluar dari fungsi. Membaca isi file ke buffer dengan Mengalokasikan buffer untuk isi file. Membaca maksimal `BUFFER_SIZE - 1` byte ke `file_data`. Menambahkan null-terminator (`\0`) di akhir supaya bisa diproses sebagai string. Kemudian, file ditutup setelah dibaca. Fungsi `connect_to_server()` dipanggil untuk membuat koneksi TCP ke server. Jika gagal, memori dibebaskan dan fungsi keluar. Menyiapkan dan mengirim pesan ke server dengan Format pesan: `DECRYPT:<nama_file>\n<isi_file>\n\n`. Pesan dikirim ke server menggunakan `send()`. Setelah pengiriman selesai, koneksi disinyalir berakhir dengan `shutdown()` arah penulisan. Menerima dan memproses balasan dari server. Bila ada data, tambahkan null-terminator untuk mengubahnya jadi string. Jika server mengirim balasan dengan awalan `"OK:"`, artinya dekripsi sukses. Jika bukan, pesan error dari server ditampilkan.
+Jika tidak ada respons sama sekali, tampilkan peringatan. Terakhir, menutup koneksi socket dan membebaskan memori yang dialokasikan sebelumnya.
+```
+void download_file() {
+    char filename[256];
+    printf("Enter the file name to download: ");
+    scanf("%255s", filename);
+
+    int sock = connect_to_server();
+    if (sock < 0) return;
+
+    char request[512];
+    int rlen = snprintf(request, sizeof(request), "DOWNLOAD:%s\n", filename);
+    send(sock, request, rlen, 0);
+    shutdown(sock, SHUT_WR);
+
+    char header[BUFFER_SIZE];
+    int n = recv(sock, header, sizeof(header)-1, 0);
+    if (n <= 0) {
+        printf("No response from server.\n");
+        close(sock);
+        return;
+    }
+    header[n] = '\0';
+    if (strncmp(header, "OK:", 3) != 0) {
+        printf("Server Error: %s", header + 4);
+        close(sock);
+        return;
+    }
+
+    // simpan file langsung di folder client
+    char save_path[512];
+    snprintf(save_path, sizeof(save_path), "client/%s", filename);
+    FILE *fp = fopen(save_path, "wb");
+    if (!fp) {
+        perror("File write error");
+        close(sock);
+        return;
+    }
+
+    char *body = strchr(header, '\n');
+    if (body) {
+        body++;
+        int body_len = n - (body - header);
+        fwrite(body, 1, body_len, fp);
+    }
+
+    while ((n = recv(sock, header, sizeof(header), 0)) > 0) {
+        fwrite(header, 1, n, fp);
+    }
+
+    fclose(fp);
+    close(sock);
+    printf("Success! Image saved as %s\n", save_path);
+}
+```
+User diminta mengetik nama file yang ingin diunduh. Nama ini akan dikirim ke server. Membuka koneksi ke server dengan memanggil fungsi `connect_to_server()` untuk membuat koneksi socket TCP. Jika gagal, keluar dari fungsi. Menyusun dan mengirim request ke server dengan Menyusun permintaan dalam format `DOWNLOAD:<nama_file>\n`. Dikirim melalui socket ke server. Lalu dilakukan `shutdown()` pada arah tulis sebagai sinyal bahwa klien selesai mengirim. Menerima balasan pertama dari server. Jika tidak ada data, ditampilkan pesan bahwa server tidak merespons. Tambahkan null-terminator agar bisa diproses sebagai string. Jika respons tidak diawali dengan `"OK:"`, maka server mengirim error (misalnya file tidak ditemukan). Program menampilkan error tersebut dan keluar. Membuat file tujuan di folder `client/` dengan Path lengkap file hasil unduhan dibentuk, misalnya `client/image.jpg`. File dibuka (atau dibuat) untuk penulisan biner (wb). Jika gagal membuat file, program keluar dengan pesan error. Mencari awal isi file pada respons pertama (setelah baris header). Data yang sudah diterima sebagian ini langsung ditulis ke file. Melakukan `recv()` berulang kali untuk menerima potongan data file selanjutnya dari server.
+Data ditulis langsung ke file tanpa diproses. File ditutup setelah selesai ditulis. Socket ditutup karena komunikasi selesai. Menampilkan konfirmasi bahwa file berhasil disimpan.
+
+### image_server.c
+`#define PORT   8080` 
+Baris ini mendefinisikan sebuah makro bernama PORT dengan nilai 8080.
+Makro ini biasanya digunakan untuk menetapkan port TCP yang akan dipakai oleh server untuk mendengarkan koneksi dari client.
+`#define CHUNK_SIZE 4096`
+Makro `CHUNK_SIZE` memiliki nilai 4096 (4 KB).
+Nilai ini umumnya digunakan sebagai ukuran buffer saat membaca atau menulis data dalam potongan (chunk).
+`#define LOG_PATH "server/server.log"`
+Makro LOG_PATH menyimpan path ke file log server, yaitu "`server/server.log`".
+File log ini digunakan untuk mencatat: Aktivitas server (seperti koneksi yang masuk), perintah dari client, error yang terjadi.
+`#define DB_DIR "server/database/"`
+Makro `DB_DIR` menunjukkan folder tempat penyimpanan file hasil (output) server, seperti file hasil dekripsi, download, dll.
+```
+void log_action(const char* src, const char* act, const char* info) {
+    FILE* log = fopen(LOG_PATH, "a");
+    if (!log) return;
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    fprintf(log,
+      "[%s][%04d-%02d-%02d %02d:%02d:%02d]: [%s] [%s]\n",
+      src,
+      tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday,
+      tm.tm_hour, tm.tm_min, tm.tm_sec,
+      act, info
+    );
+    fclose(log);
+}
+```
+Fungsi log_action digunakan untuk mencatat aktivitas tertentu ke dalam file log server. Parameter yang digunakan: `src`: sumber aksi, misalnya "CLIENT", "SERVER", "AUTH", dll. `act`: aksi atau perintah yang dilakukan, misalnya "`DECRYPT`", "`DOWNLOAD`", dll. `info`: detail tambahan, seperti nama file atau hasil operasi. `fopen(LOG_PATH, "a")`: membuka file log (misalnya `server/server.log`) dalam mode append (`"a"`), artinya data baru akan ditambahkan di akhir file tanpa menghapus data sebelumnya. Jika file tidak bisa dibuka (misalnya karena tidak ada izin atau path salah), fungsi langsung keluar tanpa mencatat apa pun. `time(NULL)` mengambil waktu saat ini dalam format epoch. `localtime()` mengonversinya ke struktur `tm` yang berisi komponen waktu lokal (tahun, bulan, hari, jam, menit, detik). Menuliskan satu baris log dengan format sebagai berikut: `[SOURCE][YYYY-MM-DD HH:MM:SS]: [ACTION] [INFO]`. Setelah mencatat log, file ditutup untuk menyimpan perubahan dan mencegah kebocoran file descriptor. Fungsi `log_action()` berguna untuk: Melacak semua aktivitas yang dilakukan oleh server, memberikan informasi waktu dan konteks dari setiap tindakan, membantu proses debugging dan audit sistem.
+```
+char* reverse_str(const char* s) {
+    int n = strlen(s);
+    char* r = malloc(n+1);
+    for (int i = 0; i < n; i++) r[i] = s[n-1-i];
+    r[n] = '\0';
+    return r;
+}
+```
+Fungsi ini menerima input berupa string (`const char* s`) dan mengembalikan string baru yang merupakan hasil pembalikan dari string input. Menggunakan fungsi `strlen` untuk mengetahui panjang dari string `s`. Mengalokasikan memori sebanyak `n+1` karakter untuk menyimpan hasil pembalikan string. Tambahan `+1` dibutuhkan untuk menampung karakter null-terminator `\0` di akhir string. Melakukan iterasi sebanyak `n` kali. Setiap karakter dari posisi akhir di `s` dipindahkan ke awal di `r`. Menambahkan karakter `'\0'` di akhir string agar string valid dan bisa dikenali sebagai akhir oleh fungsi-fungsi C standar. Mengembalikan pointer ke string hasil pembalikan. Fungsi ini tidak mengubah string asli karena `s` bertipe `const char*`. 
+```
+char* hex_decode(const char* hex, int* out_len) {
+    int len = strlen(hex);
+    if (len % 2 != 0) return NULL;
+    *out_len = len/2;
+    char* out = malloc(*out_len);
+    for (int i = 0; i < *out_len; i++) {
+        unsigned int byte;
+        if (sscanf(hex + 2*i, "%2x", &byte) != 1) {
+            free(out);
+            return NULL;
+        }
+        out[i] = (char)byte;
+    }
+    return out;
+}
+```
+Fungsi `hex_decode`, yang digunakan untuk mengubah (decode) string hexadecimal menjadi data asli (byte array atau string biner). Panjang string heksadesimal harus genap (karena setiap byte diwakili oleh 2 digit heksadesimal). Jika tidak genap, tidak valid → `return NULL`. Setiap 2 karakter hex menghasilkan 1 byte → hasil decode akan memiliki panjang `len / 2`. Alokasi memori sebanyak `out_len` untuk menyimpan hasil decode. Iterasi setiap 2 karakter `(%2x)` dari input hex, lalu diubah menjadi byte (unsigned int byte). Fungsi `sscanf(hex + 2*i, "%2x", &byte)` membaca 2 karakter hex dan mengubahnya jadi angka (0–255).
+Jika gagal decode, maka: `free(out)` → bebaskan memori dan `return NULL`. Setiap byte hasilnya disimpan ke `array out[i]`. Setelah semua byte berhasil dikonversi, hasilnya dikembalikan.
+```
+void decrypt_and_save(int client, const char* filename, const char* rawdata) {
+    log_action("Client", "DECRYPT", filename);
+
+    // filter hanya hex digit
+    int L = strlen(rawdata);
+    char* hex = malloc(L+1);
+    int h = 0;
+    for (int i = 0; i < L; i++) {
+        if (isxdigit((unsigned char)rawdata[i])) {
+            hex[h++] = rawdata[i];
+        }
+    }
+    hex[h] = '\0';
+
+    if (h == 0 || (h % 2) != 0) {
+        send(client, "ERR:Invalid hex input\n", 21, 0);
+        free(hex);
+        return;
+    }
+
+    // reverse & decode
+    char* rev = reverse_str(hex);
+    free(hex);
+    int bin_len;
+    char* bin = hex_decode(rev, &bin_len);
+    free(rev);
+    if (!bin) {
+        send(client, "ERR:Invalid hex input\n", 21, 0);
+        return;
+    }
+
+    // buat filename berdasarkan timestamp
+    char outname[64];
+    time_t now = time(NULL);
+    snprintf(outname, sizeof(outname), "%ld.jpeg", now);
+
+    // simpan file
+    char path[128];
+    snprintf(path, sizeof(path), DB_DIR "%s", outname);
+    FILE* f = fopen(path, "wb");
+    if (!f) {
+        send(client, "ERR:Failed to write file\n", 25, 0);
+        free(bin);
+        return;
+    }
+    // tulis seluruh data binari
+    if (fwrite(bin, 1, bin_len, f) != (size_t)bin_len) {
+        send(client, "ERR:Write incomplete\n", 20, 0);
+        fclose(f);
+        free(bin);
+        return;
+    }
+    fclose(f);
+    free(bin);
+
+    log_action("Server", "SAVE", outname);
+
+    char resp[80];
+    snprintf(resp, sizeof(resp), "OK:%s\n", outname);
+    send(client, resp, strlen(resp), 0);
+}
+```
+Fungsi `decrypt_and_save` mencatat bahwa client melakukan permintaan dekripsi terhadap `filename`. Menyaring `rawdata`, menyisakan hanya karakter yang valid sebagai hex digit (`0–9, a–f, A–F`). Disimpan ke variabel baru hex. Jika jumlah karakter hex tidak genap (karena 1 byte = 2 hex) atau kosong, kirim error ke client dan akhiri proses. Balik string hex (`reverse_str`) karena client mengirim dalam urutan terbalik. Decode dari hex → byte array (`hex_decode`). Jika gagal, kirim pesan error ke client. Membuat nama file unik berdasarkan timestamp UNIX (misal `1715151201.jpeg`) untuk menghindari duplikat. File disimpan sebagai binary (`wb`) di folder `server/database/`. Tulis semua byte hasil decode ke file. Jika jumlah byte yang ditulis tidak sesuai, kirim error dan keluar. Tutup file dan bebaskan memori. Log bahwa server telah menyimpan file hasil dekripsi. Memberi tahu client bahwa proses dekripsi dan penyimpanan berhasil, serta nama file hasilnya.
+```
+void send_file(int client, const char* filename) {
+    log_action("Client", "DOWNLOAD", filename);
+    char path[128];
+    snprintf(path, sizeof(path), DB_DIR "%s", filename);
+    FILE* f = fopen(path, "rb");
+    if (!f) {
+        send(client, "ERR:File not found\n", 19, 0);
+        return;
+    }
+    char hdr[80];
+    snprintf(hdr, sizeof(hdr), "OK:%s\n", filename);
+    send(client, hdr, strlen(hdr), 0);
+
+    char buf[CHUNK_SIZE];
+    size_t n;
+    while ((n = fread(buf, 1, sizeof(buf), f)) > 0) {
+        send(client, buf, n, 0);
+    }
+    fclose(f);
+    log_action("Server", "UPLOAD", filename);
+}
+```
+Fungsi `send_file` Mencatat di file log bahwa client meminta file tertentu untuk di-download. Menyusun path lengkap file (misal: `server/database/1715151201.jpeg`). Membuka file dalam mode read binary (`rb`). Jika gagal (file tidak ditemukan), kirim error ke client dan keluar. Mengirim header ke client berisi status berhasil dan nama file, misalnya: `OK:1715151201.jpeg`. Membaca isi file per `CHUNK_SIZE` byte (4096 byte per iterasi). Mengirim tiap potongan (`buf`) ke client hingga file habis terbaca. Menutup file dan mencatat bahwa server telah mengirim file ke client (aksi "UPLOAD"). 
+```
+void handle_client(int client) {
+    // buffer dinamis
+    size_t cap = CHUNK_SIZE, len = 0;
+    char* buf = malloc(cap);
+    char tmp[CHUNK_SIZE];
+    ssize_t n;
+    // baca hingga client shutdown write
+    while ((n = recv(client, tmp, sizeof(tmp), 0)) > 0) {
+        if (len + n >= cap) {
+            cap *= 2;
+            buf = realloc(buf, cap);
+        }
+        memcpy(buf + len, tmp, n);
+        len += n;
+    }
+    if (len == 0) { free(buf); close(client); return; }
+    buf[len] = '\0';
+
+    // pisah header/body pada newline pertama
+    char* p = memchr(buf, '\n', len);
+    if (!p) {
+        send(client, "ERR:Invalid format\n", 19, 0);
+        free(buf);
+        close(client);
+        return;
+    }
+    *p = '\0';
+    const char* header = buf;
+    const char* body   = p+1;
+
+    if (strncmp(header, "DECRYPT:", 8) == 0) {
+        decrypt_and_save(client, header+8, body);
+    }
+    else if (strncmp(header, "DOWNLOAD:", 9) == 0) {
+        send_file(client, header+9);
+    }
+    else {
+        send(client, "ERR:Unknown command\n", 20, 0);
+    }
+
+    free(buf);
+    close(client);
+}
+```
+ Fungsi `handle_client` Inisialisasi Buffer Dinamis, `cap`: kapasitas awal buffer (4096 byte), `len`: panjang data yang telah diterima sejauh ini, `buf`: buffer utama yang akan menyimpan seluruh data, `tmp`: buffer sementara untuk menerima data per chunk. Menerima data dari client menggunakan `recv`. Jika buffer utama tidak cukup besar, perbesar kapasitas dua kali lipat (`realloc`). Gabungkan data dari `tmp` ke `buf`. Jika tidak ada data yang masuk, langsung tutup koneksi. Tambahkan null terminator agar `buf` bisa diperlakukan sebagai string. Mencari newline pertama (`\n`) sebagai pemisah antara header dan body. Jika tidak ditemukan, kirim error dan keluar. `header`: bagian awal dari `buf` (sebelum \n), berisi perintah seperti `DECRYPT:filename`. `body`: bagian setelah newline, berisi konten data (misal: teks hex terenkripsi). Mengecek perintah di bagian `header`. Jika `DECRYPT:<filename>`, maka jalankan fungsi dekripsi dan simpan file. Jika `DOWNLOAD:<filename>`, kirim file ke client. Jika tidak dikenal, kirim error.
+Hapus buffer yang telah dialokasikan. Tutup koneksi socket client.
+
+### output client menu
+![Screenshot 2025-05-08 082951](https://github.com/user-attachments/assets/b1131d2c-c13d-4e29-9b5b-2afca8d7e5c1)
+![Screenshot 2025-05-08 083325](https://github.com/user-attachments/assets/306e5c01-8110-451c-8fd2-cdfadf84e1f6)
+
+### isi server.log
+![Screenshot 2025-05-08 083457](https://github.com/user-attachments/assets/5ccdda3b-70ae-4c16-8fc3-1eb1fc3eeb84)
+
+### struktur direktori akhir 
+![Screenshot 2025-05-08 083551](https://github.com/user-attachments/assets/55e0b154-89f7-4fc0-b72f-d0e93e182f57)
+
+### rootkids
+![Screenshot 2025-05-08 083713](https://github.com/user-attachments/assets/221cff17-51f4-4fb3-ad86-48f5fc5bcc00)
+
+### Revisi 
+```
+    //Simpan direktori kerja saat ini
+    char old_cwd[PATH_MAX];
+    if (!getcwd(old_cwd, sizeof(old_cwd))) {
+        perror("getcwd failed");
+        exit(1);
+    }
+
+    // Fork proses utama untuk membuat daemon
+    pid_t pid = fork();
+    if (pid < 0) {
+        perror("fork failed");
+        exit(1);
+    }
+    if (pid > 0) {
+        // Proses induk mengakhiri dirinya sendiri
+        exit(0);
+    }
+
+    // Set session ID dan detasemen dari terminal
+    if (setsid() < 0) {
+        perror("setsid failed");
+        exit(1);
+    }
+
+    // Kembalikan direktori kerja ke aplikasi
+    if (chdir(old_cwd) < 0) {
+        perror("chdir failed");
+        // Lanjutkan meskipun terjadi kesalahan pada chdir
+    }
+
+    // Tutup file descriptor standar
+    fclose(stdout);
+    fclose(stderr);
+    fclose(stdin);
+```
+Mengubah proses biasa menjadi daemon, yaitu proses latar belakang (background service) yang berjalan tanpa terikat terminal/logged-in user. `getcwd()` digunakan untuk menyimpan direktori kerja saat ini ke variabel `old_cwd`. Hal ini penting jika ingin nanti kembali ke direktori semula setelah daemonisasi. Jika gagal, program berhenti. `fork()` digunakan untuk membuat proses baru (anak). Proses induk langsung keluar, sehingga hanya proses anak yang lanjut dan menjadi daemon. Ini adalah langkah standar dalam pembuatan daemon agar tidak menjadi proses grup leader. `setsid()` membuat session baru, menjadikan proses sebagai session leader. Ini juga melepaskan proses dari terminal yang sebelumnya melekat. Ini mencegah proses menerima sinyal dari terminal. `chdir()` digunakan untuk kembali ke direktori kerja semula. Biasanya daemon pindah ke `/`, tapi dalam kasus ini ingin tetap di direktori semula. Jika gagal, hanya akan menampilkan error tapi program tetap jalan. Menutup `stdin, stdout, dan stderr` untuk benar-benar melepaskan daemon dari terminal. Proses daemon seharusnya tidak bergantung pada terminal input/output. Output log biasanya dialihkan ke file (misalnya `server.log`).
 
 ## Soal no 2
 ### Dispatcher.c
