@@ -493,67 +493,103 @@ Fungsi utama atau `main` akan membuat key unik untuk shared memory. Dengan `shmg
 
 ### Delivery_agent.c
 ```
-void write_log(const char *agent, const char *name, const char *address) {
-    FILE *log = fopen(LOGFILE, "a"); 
+typedef struct {
+    char name[NAME_LEN];
+    char address[ADDR_LEN];
+    char type[TYPE_LEN]; 
+    bool delivered;
+    char agent[AGENT_LEN]; 
+} Order;
+
+typedef struct {
+    Order orders[MAX_ORDERS];
+    int count;
+} SharedData;
+
+SharedData *shared_data;
+```
+Struktur data `Shared Data` nantinya akan menyimpan data shared memory yang berada di dispatcher sebelumnya, Pointer global untuk mengakses shared memory yang akan dikirim ke alamat memori dengan `shmat`
+
+```
+void tulis_log(const char *agent, const char *nama, const char *alamat) {
+    FILE *log = fopen(LOGFILE, "a");
     if (!log) {
-        perror("Failed to open log file"); 
+        perror("Gagal membuka delivery.log");
         return;
     }
 
-    time_t now = time(NULL);             
+    time_t now = time(NULL);
     struct tm *t = localtime(&now);
-fprintf(log, "[%02d/%02d/%04d %02d:%02d:%02d] [%s] Express package delivered to [%s] in [%s]\n",
+
+    fprintf(log, "[%02d/%02d/%04d %02d:%02d:%02d] [%s] Express package delivered to [%s] in [%s]\n",
             t->tm_mday, t->tm_mon + 1, t->tm_year + 1900,
             t->tm_hour, t->tm_min, t->tm_sec,
-            agent, name, address);
+            agent, nama, alamat);
+
+    fclose(log);
+}
 ```
-Fungsi `wite_log` akan menulis list pengiriman di `delivery.log` secara append. Ia akan menulis secara real time dan akan mencetak file log seperti format yang diminta oleh soal.
+Fungsi ini nanti akan mencatat setiap pengiriman express ke `delivery.log` dengan parameter agent, nama, dan alamat. File log akan dibuka dalam mode append agar setiap ditambahkan tidak menghapus sbelumnya dan berlanjut. Jika gagal membuka maka akan menulis notifikasi dan keluar. Nantinya akan mengeprint waktu dalam bentuk detik dan dikonversi waktu lokal oleh `time_t`.
 
 ```
-void *agent_function(void *arg) {
-    char *agent_name = (char *)arg; 
-    key_t key = ftok("dispatcher.c", 123);
-    int shmid = shmget(key, sizeof(SharedData), 0666);
-    if (shmid < 0) {
-        perror("Gagal mendapatkan shared memory"); // Jika gagal, keluar dari thread
-        pthread_exit(NULL);
-    }
-    SharedData *data = (SharedData *)shmat(shmid, NULL, 0);
-```
-Ini merupakan Fungsi thread utama yang dijalan oleh setiap agent dimana pada `key-t` program akan membuat kunci untuk shared memory  berdasarkan file `dispatcher.c` dan ID 123. . Di `int shmid` program akan mengambil ID dengan ukuran struktur shared data. Kemudian akan dibawah shared memory ke memori loka user.
+void* agen_thread(void *arg) {
+    char *agen_nama = (char *)arg;
 
-```
-while (1) {
-        for (int i = 0; i < data->count; i++) {
-            if (!data->orders[i].delivered && strcmp(data->orders[i].type, "Express") == 0) {
-                data->orders[i].delivered = true; 
-                strncpy(data->orders[i].agent, agent_name, AGENT_LEN);
-                write_log(agent_name, data->orders[i].name, data->orders[i].address);
+    while (1) {
+        for (int i = 0; i < shared_data->count; i++) {
+            if (!shared_data->orders[i].delivered &&
+                strcmp(shared_data->orders[i].type, "Express") == 0) {
+                
+                // Tandai dikirim
+                shared_data->orders[i].delivered = true;
+                strncpy(shared_data->orders[i].agent, agen_nama, AGENT_LEN);
 
-                printf("%s delivered order for %s\n", agent_name, data->orders[i].name);
-                sleep(1);
+                tulis_log(agen_nama, shared_data->orders[i].name, shared_data->orders[i].address);
+
+                sleep(1); 
             }
         }
-        sleep(2);
+
+        sleep(2); 
     }
+
+    return NULL;
+}
 ```
-Loop tanpa akhir dimana agen akan terus bekerja memeriksa pesanan baru di file csv. `if (!data->orders[i]` akan mengecek apakah order bertipe Express dan belum dikirm. Kemudian fungsi `strncpy` akan mencatat siapa agen yang mengirim dan nantinya akan ditulis ke dalam file `delivery.log`. `printf` dimana akanmenampilkan info pengiriman dengan delay 1 detik setelah pengiriman. Delay 2 detik dibutuhkan sebelum memeriksa ulang agar tidak boros CPU.
+Selanjutnya ada fungsi yang dijalankan oleh agen pengantar a, b, c. dan diteruskan sebagai pointer ke `char`. Nantinya thread ini akan berjalan dalam loop tanpa akhir dan terus memantau order baru. Di loop `for..` akan melooping semua order yang tersedia di shared memory. Setelah valid nantinya akan ditanda kalau sudah dikirim oleh agen dan disimpan melalui command `tulis_log` di delivery.log.
 
 ```
 int main() {
-    pthread_t agents[3];  
-    const char *names[] = {"AGENT A", "AGENT B", "AGENT C"}; 
-    for (int i = 0; i < 3; i++) {
-        pthread_create(&agents[i], NULL, agent_function, (void *)names[i]);
+    key_t key = ftok("dispatcher.c", 123);
+    int shmid = shmget(key, sizeof(SharedData), 0666);
+    if (shmid == -1) {
+        perror("Gagal mendapatkan shared memory");
+        exit(1);
     }
 
-        for (int i = 0; i < 3; i++) {
-        pthread_join(agents[i], NULL);
+    shared_data = (SharedData *)shmat(shmid, NULL, 0);
+    if (shared_data == (void *) -1) {
+        perror("Gagal menempelkan shared memory");
+        exit(1);
     }
-
-    return 0;
 ```
-Fungsi utama dimana `pthread` merupakan array untuk menyimpan thread 3 agen tadi. `for (int i = 0; i < 3; i++)` akan membuat 3 thread masing masing untuk 1 agen yang bertugas sesuai instruksi soal. Kemudia tunggu semua thread karena loop infinite terjadi di `agent_function`. Shared memory digunakan agar sinkronasi data ke-2 proses terjadi secara real time.
+Fungsi utama yang bertugas mengakses shared memory melalui agen. `key_t` bertugas membuat key unik untuk shared memory menggunakan kombinasi file dispatcher. Nantinya `shmid` akan mendapatkan id shared memory berdasarkan key. Kirim shared memory ke alamat lokal `shared_data` sehingga nantinya agen bisa membaca file.
+```
+pthread_t thread_a, thread_b, thread_c;
+    pthread_create(&thread_a, NULL, agen_thread, "AGENT A");
+    pthread_create(&thread_b, NULL, agen_thread, "AGENT B");
+    pthread_create(&thread_c, NULL, agen_thread, "AGENT C");
+
+    pthread_join(thread_a, NULL);
+    pthread_join(thread_b, NULL);
+    pthread_join(thread_c, NULL);
+
+    shmdt(shared_data);
+    return 0;
+}
+```
+Variabel untuk menyimpan ID agen di `agen_thread` dengan nama masing masing. Nantinya command akan menunggu agar program utama tidka selesai sebelum semua agen selesai. Karena berjalan secara looping tak terbatas. Program akan terus mengerun kecuali dihentikan dengan `Ctrl+C`.
+
 
 ### Output ./dispatcher -list
 ![image](https://github.com/user-attachments/assets/3a483731-7e4d-41fb-82fe-4c848c0643f6)
