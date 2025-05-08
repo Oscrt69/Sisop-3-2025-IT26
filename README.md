@@ -565,13 +565,28 @@ Fungsi utama dimana `pthread` merupakan array untuk menyimpan thread 3 agen tadi
 ![image](https://github.com/user-attachments/assets/fe1fc50c-4024-418e-8595-1e97ce4f2b71)
 Dapat dilihat jika log menampilan sesuai dengan pengiriman oleh delivery agent dan khusus untuk `./dispatcher -deliver` mengirimkan opsi reguler dengan nama user yang tertera.
 
-
-
-
-
-
-
 ## Soal no 3
+
+Cara compiile soal nomor 3
+```
+gcc dungeon.c shop.c -o dungeon -lpthread
+```
+
+```
+gcc -o player player.c
+```
+Setelah compile, lalu jalankan dengan `./dungeon` terlebih dahulu sebelum `./player` lalu Dungeon akan running di port 8080 seperti pada gambar dan abaikan pesan di kanan bawah.  <br>
+
+<img src = "https://github.com/user-attachments/assets/5876c801-4ff5-408f-b5de-a05e8378c030" width = "400"> <br>
+
+Program tidak bisa dijalankan kalau user command `./player` sebelum `./dungeon` <br>
+
+<img src = "https://github.com/user-attachments/assets/3b6cc993-afd4-4670-9328-b7c68295edd8" width = "400"> <br>
+
+Setelah itu akan tampil beberapa menu seperti pada gambar di bawah <br>
+
+<img src = "https://github.com/user-attachments/assets/0a184f4e-e3b7-4ba8-a71b-925ff27cc7dc" width = "400"> <br>
+
 
 ## Soal no 4
 
