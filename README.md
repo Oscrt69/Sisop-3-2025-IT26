@@ -587,6 +587,11 @@ Setelah itu akan tampil beberapa menu seperti pada gambar di bawah <br>
 
 <img src = "https://github.com/user-attachments/assets/0a184f4e-e3b7-4ba8-a71b-925ff27cc7dc" width = "400"> <br>
 
+`printf("Gold: %d | Equipped Weapon: %s | Base Damage: %d | Kills: %d\n", gold, weapon, damage, kills);`
+Kode ini memuat informasi seputar default stats yang dimiliki user awal permainan.
+
+<img src = "https://github.com/user-attachments/assets/7ed2b6f6-bf0a-442f-9e39-de1c77733bb7" width = "400"> <br>
+
 
 ## Soal no 4
 
