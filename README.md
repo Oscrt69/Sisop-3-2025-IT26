@@ -619,14 +619,41 @@ Program tidak bisa dijalankan kalau user command `./player` sebelum `./dungeon` 
 
 <img src = "https://github.com/user-attachments/assets/3b6cc993-afd4-4670-9328-b7c68295edd8" width = "400"> <br>
 
-Setelah itu akan tampil beberapa menu seperti pada gambar di bawah <br>
-
 <img src = "https://github.com/user-attachments/assets/0a184f4e-e3b7-4ba8-a71b-925ff27cc7dc" width = "400"> <br>
+
+Setelah itu akan tampil beberapa menu seperti pada gambar di atas <br>
+
+<img src = "https://github.com/user-attachments/assets/7ed2b6f6-bf0a-442f-9e39-de1c77733bb7" width = "400"> <br>
 
 `printf("Gold: %d | Equipped Weapon: %s | Base Damage: %d | Kills: %d\n", gold, weapon, damage, kills);`
 Kode ini memuat informasi seputar default stats yang dimiliki user awal permainan.
+                                                                                                                
+```
+//player.c
 
-<img src = "https://github.com/user-attachments/assets/7ed2b6f6-bf0a-442f-9e39-de1c77733bb7" width = "400"> <br>
+printf("\n== WEAPON SHOP ==\n");
+    char* items = buffer + 5;
+    char* item = strtok(items, "|");
+    while (item != NULL) {
+        printf("%s\n", item);
+        item = strtok(NULL, "|");
+    }
+    
+    printf("\nEnter weapon number to buy (0 to cancel): ");
+    int choice;
+    scanf("%d", &choice);
+    clear_input_buffer();
+```
+Kode ini mengambil string senjata dari server, memecah berdasarkan |, lalu menampilkan setiap senjata agar user bisa memilih salah satu untuk dibeli. `clear_input_buffer()` adalah fungsi tambahan untuk membersihkan karakter sisa di buffer, seperti \n yang tertinggal setelah scanf, agar input selanjutnya tidak error.
+
+<img src = "https://github.com/user-attachments/assets/9767bad5-888f-4ad3-9970-064d0189ab4c" width = "400"> <br>
+
+Gambar di atas adalah tampilan menu toko senjata.
+
+<img src = "https://github.com/user-attachments/assets/c910892b-ab3f-4c9a-94b1-1fe727882293" width = "600"> <br>
+<img src = "https://github.com/user-attachments/assets/d4b21073-2d3f-403a-b57e-d97d9eae88f4" width = "400"><br>
+
+Saat memasuki mode battle, player memiliki 2 opsi command yaitu `attack` untuk menyerang dan `exit` untuk keluar medan perang. Jumlah damage yang dihasilkan bisa bervariasi. Setiap damage yang critical akan menghasilkan jumlah damage yang lebih besar. Setelah memenangkan battle, player mendapatkan reward.
 
 
 ## Soal no 4
